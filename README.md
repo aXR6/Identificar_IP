@@ -13,21 +13,40 @@ Ferramenta em Python para consultar informações de um endereço IP. Agora é p
 - Python 3.10 ou superior
 - Pacotes listados em `requirements.txt`
 
-Para instalar as dependências (versões indicadas em `requirements.txt`):
+Após clonar o repositório, instale as dependências (versões indicadas em `requirements.txt`):
 
 ```bash
 pip install -r requirements.txt
 ```
 
+## Instalação
+
+Clone o projeto e entre no diretório:
+
+```bash
+git clone https://github.com/aXR6/Identificar_IP.git
+cd Identificar_IP
+```
+
+Após ajustar o arquivo `.env` (copiando o exemplo), carregue as variáveis de
+ambiente com o script `init-env.sh`:
+
+```bash
+cp .env.example .env
+vi .env
+source init-env.sh
+```
+
 ## Uso
 
-Execute o script `ip_lookup.py` informando o IP desejado ou rode sem argumentos para abrir o menu interativo. Utilize um arquivo `.env` (veja `.env.example`) para definir as chaves de API:
+Execute o script `ip_lookup.py` com o Python 3 informando o IP desejado ou rode sem argumentos para abrir o menu interativo. Utilize um arquivo `.env` (veja `.env.example`) para definir as chaves de API:
 
 ```bash
 # executando todas as consultas
-python ip_lookup.py 8.8.8.8 --full
+# executando todas as consultas
+python3 ip_lookup.py 8.8.8.8 --full
 # ou simplesmente
-python ip_lookup.py
+python3 ip_lookup.py
 ```
 
 Parâmetros adicionais:
