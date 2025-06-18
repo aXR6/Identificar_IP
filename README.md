@@ -1,6 +1,12 @@
 # Identificar IP
 
-Ferramenta em Python para consultar informações de um endereço IP. O programa realiza consultas WHOIS/ASN, geolocalização e executa um traceroute.
+Ferramenta em Python para consultar informações de um endereço IP. Agora é possível consultar diversas fontes além do WHOIS/ASN e traceroute:
+
+- GeoIP2 (GeoLite2 local)
+- Shodan
+- AbuseIPDB
+- Censys Search
+- DNS reverso e listas RBL
 
 ## Requisitos
 
@@ -15,10 +21,11 @@ pip install -r requirements.txt
 
 ## Uso
 
-Execute o script `ip_lookup.py` informando o IP desejado ou rode sem argumentos para abrir o menu interativo:
+Execute o script `ip_lookup.py` informando o IP desejado ou rode sem argumentos para abrir o menu interativo. Utilize um arquivo `.env` (veja `.env.example`) para definir as chaves de API:
 
 ```bash
-python ip_lookup.py 8.8.8.8
+# executando todas as consultas
+python ip_lookup.py 8.8.8.8 --full
 # ou simplesmente
 python ip_lookup.py
 ```
@@ -28,6 +35,25 @@ Parâmetros adicionais:
 - `--hops N` define o número máximo de saltos para o traceroute (padrão 10).
 - `--file ARQUIVO` permite informar um arquivo com uma lista de IPs, um por linha.
 - `--token TOKEN` ou variável `IPINFO_TOKEN` para autenticar requisições ao IPinfo.
+- `--full` executa todas as consultas disponíveis.
+
+Copie o arquivo de exemplo e preencha as credenciais necessárias:
+
+```bash
+cp .env.example .env
+vi .env
+```
+
+### Onde obter as chaves de API
+
+Algumas consultas dependem de serviços externos que exigem cadastro. Crie conta
+gratuitamente (quando disponível) nos sites abaixo para gerar sua chave:
+
+- [ipinfo.io](https://ipinfo.io/) – token para geolocalização IP.
+- [MaxMind](https://www.maxmind.com/) – download do banco GeoLite2 (GeoIP2).
+- [Shodan](https://www.shodan.io/) – consultas sobre portas e serviços.
+- [AbuseIPDB](https://www.abuseipdb.com/) – reputação e denúncias de IPs.
+- [Censys](https://search.censys.io/) – informações de certificados e hosts.
 
 O resultado exibirá os dados de WHOIS/ASN, geolocalização e o caminho do traceroute.
 

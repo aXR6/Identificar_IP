@@ -8,6 +8,12 @@ from ipwhois import IPWhois
 import requests
 from typing import Any, Dict, List
 
+from dotenv import load_dotenv
+import dns.resolver
+import geoip2.database
+from shodan import Shodan
+from censys.search import CensysHosts
+
 
 def is_valid_ip(ip: str) -> bool:
     """Return True if *ip* is a valid IPv4 or IPv6 address."""
@@ -43,6 +49,98 @@ def geolocation_lookup(ip, token=None):
             return {'error': f'HTTP {response.status_code}'}
     except Exception as e:
         return {'error': str(e)}
+
+
+def geoip2_lookup(ip, db_path=None):
+    """Return geolocation data using a local GeoIP2 database."""
+    db_path = db_path or os.getenv('GEOIP2_DB')
+    if not db_path:
+        return {'error': 'GEOIP2_DB não configurado'}
+    try:
+        reader = geoip2.database.Reader(db_path)
+        response = reader.city(ip)
+        reader.close()
+        return {
+            'city': response.city.name,
+            'region': response.subdivisions.most_specific.name,
+            'country': response.country.name,
+            'latitude': response.location.latitude,
+            'longitude': response.location.longitude,
+            'timezone': response.location.time_zone,
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def shodan_lookup(ip, api_key=None):
+    """Return Shodan data for *ip*."""
+    api_key = api_key or os.getenv('SHODAN_API_KEY')
+    if not api_key:
+        return {'error': 'SHODAN_API_KEY não configurada'}
+    try:
+        api = Shodan(api_key)
+        return api.host(ip)
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def abuseipdb_lookup(ip, api_key=None):
+    """Query AbuseIPDB for *ip*."""
+    api_key = api_key or os.getenv('ABUSEIPDB_API_KEY')
+    if not api_key:
+        return {'error': 'ABUSEIPDB_API_KEY não configurada'}
+    url = 'https://api.abuseipdb.com/api/v2/check'
+    params = {'ipAddress': ip, 'maxAgeInDays': '90'}
+    headers = {'Key': api_key, 'Accept': 'application/json'}
+    try:
+        res = requests.get(url, headers=headers, params=params, timeout=10)
+        if res.status_code == 200:
+            return res.json()
+        else:
+            return {'error': f'HTTP {res.status_code}'}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def censys_lookup(ip, api_id=None, api_secret=None):
+    """Return Censys information for *ip*."""
+    api_id = api_id or os.getenv('CENSYS_API_ID')
+    api_secret = api_secret or os.getenv('CENSYS_API_SECRET')
+    if not api_id or not api_secret:
+        return {'error': 'Credenciais do Censys não configuradas'}
+    try:
+        client = CensysHosts(api_id=api_id, api_secret=api_secret)
+        return client.view(ip)
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def dns_lookup(ip):
+    """Return PTR records for *ip*."""
+    try:
+        rev = dns.reversename.from_address(ip)
+        answers = dns.resolver.resolve(rev, 'PTR')
+        return {'ptr': [str(r) for r in answers]}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def rbl_check(ip, rbls=None):
+    """Check if *ip* is listed on common RBLs."""
+    if rbls is None:
+        rbls = ['zen.spamhaus.org', 'bl.spamcop.net', 'dnsbl.sorbs.net']
+    reversed_ip = '.'.join(reversed(ip.split('.')))
+    result = {}
+    for rbl in rbls:
+        query = f'{reversed_ip}.{rbl}'
+        try:
+            dns.resolver.resolve(query, 'A')
+            result[rbl] = True
+        except dns.resolver.NXDOMAIN:
+            result[rbl] = False
+        except Exception as e:
+            result[rbl] = str(e)
+    return result
 
 
 def format_whois(info: Dict[str, Any]) -> str:
@@ -137,6 +235,41 @@ def format_geo(info: Dict[str, Any]) -> str:
     return '\n'.join(lines)
 
 
+def format_geoip2(info: Dict[str, Any]) -> str:
+    """Return a summary for GeoIP2 results."""
+    if not info:
+        return ""
+    if 'error' in info:
+        return f"Erro: {info['error']}"
+    key_map = [
+        ('city', 'City'),
+        ('region', 'Region'),
+        ('country', 'Country'),
+        ('latitude', 'Latitude'),
+        ('longitude', 'Longitude'),
+        ('timezone', 'Timezone'),
+    ]
+    lines: List[str] = []
+    for key, label in key_map:
+        val = info.get(key)
+        if val is not None:
+            lines.append(f"{label}: {val}")
+    return '\n'.join(lines)
+
+
+def format_dict(info: Dict[str, Any]) -> str:
+    """Return indented JSON for *info* or error string."""
+    if not info:
+        return ""
+    if 'error' in info and len(info) == 1:
+        return f"Erro: {info['error']}"
+    try:
+        import json
+        return json.dumps(info, indent=2, ensure_ascii=False)
+    except Exception:
+        return str(info)
+
+
 def traceroute(ip, hops=10):
     """Run traceroute/tracert for *ip* and return its output."""
     cmd = 'traceroute'
@@ -174,7 +307,41 @@ def process_ip(ip, hops, token=None):
     print(trace)
 
 
-def process_file(path, hops, token=None):
+def process_all(ip, hops, token=None, db_path=None):
+    """Run all available lookups for *ip*."""
+    if not is_valid_ip(ip):
+        print(f"{ip} é inválido.")
+        return
+
+    print('===== WHOIS / ASN =====')
+    print(format_whois(whois_lookup(ip)))
+
+    print('\n===== IPINFO GEO =====')
+    print(format_geo(geolocation_lookup(ip, token=token)))
+
+    print('\n===== GEOIP2 =====')
+    print(format_geoip2(geoip2_lookup(ip, db_path=db_path)))
+
+    print('\n===== SHODAN =====')
+    print(format_dict(shodan_lookup(ip)))
+
+    print('\n===== ABUSEIPDB =====')
+    print(format_dict(abuseipdb_lookup(ip)))
+
+    print('\n===== CENSYS =====')
+    print(format_dict(censys_lookup(ip)))
+
+    print('\n===== DNS =====')
+    print(format_dict(dns_lookup(ip)))
+
+    print('\n===== RBL CHECK =====')
+    print(format_dict(rbl_check(ip)))
+
+    print('\n===== TRACEROUTE =====')
+    print(traceroute(ip, hops))
+
+
+def process_file(path, hops, token=None, full=False, db_path=None):
     """Read IPs from *path* and process each one."""
     try:
         with open(path, 'r') as f:
@@ -188,25 +355,59 @@ def process_file(path, hops, token=None):
             print(f"{ip} é inválido. Pulando...")
             continue
         print(f"\n===== CONSULTANDO {ip} =====")
-        process_ip(ip, hops, token=token)
+        if full:
+            process_all(ip, hops, token=token, db_path=db_path)
+        else:
+            process_ip(ip, hops, token=token)
 
 
 def menu(hops, token=None):
-    """Interactive prompt for querying IPs or files."""
+    """Interactive prompt for querying IPs with various tools."""
+    load_dotenv()
+    db_path = os.getenv('GEOIP2_DB')
     while True:
         print('\nMenu:')
-        print('1) Inserir um endereço IP')
-        print('2) Informar arquivo com lista de IPs')
+        print('1) WHOIS/ASN')
+        print('2) Geolocalização (ipinfo)')
+        print('3) GeoIP2')
+        print('4) Shodan')
+        print('5) AbuseIPDB')
+        print('6) Censys')
+        print('7) DNS lookup')
+        print('8) Verificar RBLs')
+        print('9) Traceroute')
+        print('10) Todas as ferramentas')
+        print('11) Informar arquivo com lista de IPs (todas)')
         print('0) Sair')
         choice = input('Opção: ').strip()
-        if choice == '1':
+        if choice in {'1','2','3','4','5','6','7','8','9','10'}:
             ip = input('Digite o IP: ').strip()
-            if ip:
-                process_ip(ip, hops, token=token)
-        elif choice == '2':
+            if not ip:
+                continue
+            if choice == '1':
+                print(format_whois(whois_lookup(ip)))
+            elif choice == '2':
+                print(format_geo(geolocation_lookup(ip, token=token)))
+            elif choice == '3':
+                print(format_geoip2(geoip2_lookup(ip, db_path=db_path)))
+            elif choice == '4':
+                print(format_dict(shodan_lookup(ip)))
+            elif choice == '5':
+                print(format_dict(abuseipdb_lookup(ip)))
+            elif choice == '6':
+                print(format_dict(censys_lookup(ip)))
+            elif choice == '7':
+                print(format_dict(dns_lookup(ip)))
+            elif choice == '8':
+                print(format_dict(rbl_check(ip)))
+            elif choice == '9':
+                print(traceroute(ip, hops))
+            elif choice == '10':
+                process_all(ip, hops, token=token, db_path=db_path)
+        elif choice == '11':
             path = input('Caminho do arquivo: ').strip()
             if path:
-                process_file(path, hops, token=token)
+                process_file(path, hops, token=token, full=True, db_path=db_path)
         elif choice == '0':
             break
         else:
@@ -220,14 +421,19 @@ def main():
     parser.add_argument('--file', help='File with list of IP addresses')
     parser.add_argument('--hops', type=int, default=10, help='Max hops for traceroute')
     parser.add_argument('--token', help='IPinfo API token (or set IPINFO_TOKEN env var)')
+    parser.add_argument('--full', action='store_true', help='Run all available lookups')
     args = parser.parse_args()
 
+    load_dotenv()
     token = args.token or os.getenv('IPINFO_TOKEN')
 
     if args.ip:
-        process_ip(args.ip, args.hops, token=token)
+        if args.full:
+            process_all(args.ip, args.hops, token=token)
+        else:
+            process_ip(args.ip, args.hops, token=token)
     elif args.file:
-        process_file(args.file, args.hops, token=token)
+        process_file(args.file, args.hops, token=token, full=args.full)
     else:
         menu(args.hops, token=token)
 
