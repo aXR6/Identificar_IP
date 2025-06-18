@@ -76,7 +76,9 @@ def shodan_lookup(ip, api_key=None):
     """Return Shodan data for *ip*."""
     api_key = api_key or os.getenv('SHODAN_API_KEY')
     if not api_key:
-        return {'error': 'SHODAN_API_KEY não configurada'}
+        print('Chave da API do Shodan não configurada (SHODAN_API_KEY).')
+        print('Consulte o README para obter e definir a chave.')
+        return {}
     try:
         api = Shodan(api_key)
         return api.host(ip)
@@ -88,7 +90,9 @@ def abuseipdb_lookup(ip, api_key=None):
     """Query AbuseIPDB for *ip*."""
     api_key = api_key or os.getenv('ABUSEIPDB_API_KEY')
     if not api_key:
-        return {'error': 'ABUSEIPDB_API_KEY não configurada'}
+        print('Chave da API do AbuseIPDB não configurada (ABUSEIPDB_API_KEY).')
+        print('Cadastre-se no site e defina a chave para usar esta consulta.')
+        return {}
     url = 'https://api.abuseipdb.com/api/v2/check'
     params = {'ipAddress': ip, 'maxAgeInDays': '90'}
     headers = {'Key': api_key, 'Accept': 'application/json'}
@@ -107,7 +111,9 @@ def censys_lookup(ip, api_id=None, api_secret=None):
     api_id = api_id or os.getenv('CENSYS_API_ID')
     api_secret = api_secret or os.getenv('CENSYS_API_SECRET')
     if not api_id or not api_secret:
-        return {'error': 'Credenciais do Censys não configuradas'}
+        print('Credenciais do Censys não configuradas (CENSYS_API_ID/SECRET).')
+        print('Cadastre-se no Censys para obter as credenciais necessárias.')
+        return {}
     try:
         client = CensysHosts(api_id=api_id, api_secret=api_secret)
         return client.view(ip)
