@@ -7,7 +7,7 @@ Ferramenta em Python para consultar informações de um endereço IP. O programa
 - Python 3.10 ou superior
 - Pacotes listados em `requirements.txt`
 
-Para instalar as dependências:
+Para instalar as dependências (versões indicadas em `requirements.txt`):
 
 ```bash
 pip install -r requirements.txt
@@ -27,6 +27,7 @@ Parâmetros adicionais:
 
 - `--hops N` define o número máximo de saltos para o traceroute (padrão 10).
 - `--file ARQUIVO` permite informar um arquivo com uma lista de IPs, um por linha.
+- `--token TOKEN` ou variável `IPINFO_TOKEN` para autenticar requisições ao IPinfo.
 
 O resultado exibirá os dados de WHOIS/ASN, geolocalização e o caminho do traceroute.
 
@@ -46,4 +47,4 @@ traceroute to 8.8.8.8 (8.8.8.8), 10 hops max
 
 ## Licença
 
-Este projeto está disponível sob a licença MIT.
+Este projeto está disponível sob a licença MIT. Consulte o arquivo `LICENSE` para mais detalhes.
