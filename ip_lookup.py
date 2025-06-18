@@ -6,6 +6,7 @@ import os
 import ipaddress
 from ipwhois import IPWhois
 import requests
+from typing import Any, Dict, List
 
 
 def is_valid_ip(ip: str) -> bool:
@@ -44,6 +45,98 @@ def geolocation_lookup(ip, token=None):
         return {'error': str(e)}
 
 
+def format_whois(info: Dict[str, Any]) -> str:
+    """Return a human friendly summary for WHOIS/RDAP data."""
+    if not info:
+        return ""
+    if 'error' in info:
+        return f"Erro: {info['error']}"
+
+    lines: List[str] = []
+    asn = info.get('asn')
+    desc = info.get('asn_description')
+    if asn or desc:
+        if desc:
+            lines.append(f"ASN: {asn} ({desc})")
+        else:
+            lines.append(f"ASN: {asn}")
+
+    reg = info.get('asn_registry')
+    cc = info.get('asn_country_code')
+    cidr = info.get('asn_cidr')
+    date = info.get('asn_date')
+    reg_parts = []
+    if reg:
+        reg_parts.append(f"Registry: {reg}")
+    if cc:
+        reg_parts.append(f"Country: {cc}")
+    if cidr:
+        reg_parts.append(f"CIDR: {cidr}")
+    if date:
+        reg_parts.append(f"Date: {date}")
+    if reg_parts:
+        lines.append(" | ".join(reg_parts))
+
+    net = info.get('network') or {}
+    if net:
+        lines.append('Network:')
+        details = []
+        if net.get('name'):
+            details.append(f"Name: {net.get('name')}")
+        if net.get('country'):
+            details.append(f"Country: {net.get('country')}")
+        if net.get('type'):
+            details.append(f"Type: {net.get('type')}")
+        if details:
+            lines.append('  ' + ' | '.join(details))
+
+        range_str = ''
+        if net.get('start_address') or net.get('end_address'):
+            range_str = f"{net.get('start_address')} - {net.get('end_address')}"
+        cidr = net.get('cidr')
+        range_parts = []
+        if range_str:
+            range_parts.append(f"Range: {range_str}")
+        if cidr:
+            range_parts.append(f"CIDR: {cidr}")
+        if range_parts:
+            lines.append('  ' + ' | '.join(range_parts))
+
+    entities = info.get('entities')
+    if entities:
+        lines.append('Entities: ' + ', '.join(entities))
+
+    return '\n'.join(lines)
+
+
+def format_geo(info: Dict[str, Any]) -> str:
+    """Return a human friendly summary for geolocation data."""
+    if not info:
+        return ""
+    if 'error' in info:
+        return f"Erro: {info['error']}"
+
+    key_map = [
+        ('ip', 'IP'),
+        ('hostname', 'Hostname'),
+        ('city', 'City'),
+        ('region', 'Region'),
+        ('country', 'Country'),
+        ('loc', 'Coordinates'),
+        ('org', 'Org'),
+        ('postal', 'Postal'),
+        ('timezone', 'Timezone'),
+    ]
+
+    lines: List[str] = []
+    for key, label in key_map:
+        val = info.get(key)
+        if val:
+            lines.append(f"{label}: {val}")
+
+    return '\n'.join(lines)
+
+
 def traceroute(ip, hops=10):
     """Run traceroute/tracert for *ip* and return its output."""
     cmd = 'traceroute'
@@ -70,11 +163,11 @@ def process_ip(ip, hops, token=None):
 
     print('===== WHOIS / ASN =====')
     whois_info = whois_lookup(ip)
-    print(whois_info)
+    print(format_whois(whois_info))
 
     print('\n===== GEOLOCATION =====')
     geo_info = geolocation_lookup(ip, token=token)
-    print(geo_info)
+    print(format_geo(geo_info))
 
     print('\n===== TRACEROUTE =====')
     trace = traceroute(ip, hops)
