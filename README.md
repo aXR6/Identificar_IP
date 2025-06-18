@@ -43,6 +43,16 @@ Copie o arquivo de exemplo e preencha as credenciais necessárias:
 cp .env.example .env
 vi .env
 ```
+### Onde obter as chaves de API
+
+Algumas consultas dependem de serviços externos que exigem cadastro. Crie conta
+gratuitamente (quando disponível) nos sites abaixo para gerar sua chave:
+
+- [ipinfo.io](https://ipinfo.io/) – token para geolocalização IP.
+- [MaxMind](https://www.maxmind.com/) – download do banco GeoLite2 (GeoIP2).
+- [Shodan](https://www.shodan.io/) – consultas sobre portas e serviços.
+- [AbuseIPDB](https://www.abuseipdb.com/) – reputação e denúncias de IPs.
+- [Censys](https://search.censys.io/) – informações de certificados e hosts.
 
 O resultado exibirá os dados de WHOIS/ASN, geolocalização e o caminho do traceroute.
 
