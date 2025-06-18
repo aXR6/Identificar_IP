@@ -43,7 +43,6 @@ Copie o arquivo de exemplo e preencha as credenciais necessárias:
 cp .env.example .env
 vi .env
 ```
-
 ### Onde obter as chaves de API
 
 Algumas consultas dependem de serviços externos que exigem cadastro. Crie conta
