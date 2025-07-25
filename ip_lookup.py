@@ -348,7 +348,7 @@ def process_all(ip, hops, token=None, db_path=None):
 
 
 def process_file(path, hops, token=None, full=False, db_path=None):
-    """Read IPs from *path* and process each one."""
+    """Read IPs from *path*, process each one and create result_hash.txt."""
     try:
         with open(path, 'r') as f:
             ips = [line.strip() for line in f if line.strip()]
@@ -356,15 +356,36 @@ def process_file(path, hops, token=None, full=False, db_path=None):
         print(f'Erro ao ler arquivo: {e}')
         return
 
+    outputs = []
     for ip in ips:
         if not is_valid_ip(ip):
             print(f"{ip} é inválido. Pulando...")
             continue
         print(f"\n===== CONSULTANDO {ip} =====")
-        if full:
-            process_all(ip, hops, token=token, db_path=db_path)
-        else:
-            process_ip(ip, hops, token=token)
+        from io import StringIO
+        from contextlib import redirect_stdout
+        buf = StringIO()
+        with redirect_stdout(buf):
+            if full:
+                process_all(ip, hops, token=token, db_path=db_path)
+            else:
+                process_ip(ip, hops, token=token)
+        output = buf.getvalue()
+        print(output)
+        outputs.append(output)
+
+    if outputs:
+        import hashlib
+        result_text = "\n".join(outputs)
+        digest = hashlib.sha256(result_text.encode()).hexdigest()
+        out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               'result_hash.txt')
+        try:
+            with open(out_path, 'w') as out:
+                out.write(digest)
+            print(f'Hash salvo em {out_path}')
+        except Exception as e:
+            print(f'Erro ao salvar hash: {e}')
 
 
 def save_results_from_file(path, hops, token=None, db_path=None):
