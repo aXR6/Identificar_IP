@@ -56,8 +56,8 @@ Parâmetros adicionais:
 - `--token TOKEN` ou variável `IPINFO_TOKEN` para autenticar requisições ao IPinfo.
 - `--full` executa todas as consultas disponíveis.
 - O menu possui uma opção para ler uma lista de IPs de um arquivo. Após todas as
-  verificações, é criado automaticamente um arquivo `result_hash.txt` na pasta do
-  projeto contendo o hash das saídas.
+  verificações, é criado automaticamente um arquivo `result_data_hora.txt` na pasta do
+  projeto contendo todas as saídas.
 
 Copie o arquivo de exemplo e preencha as credenciais necessárias:
 
