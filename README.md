@@ -55,6 +55,8 @@ Parâmetros adicionais:
 - `--file ARQUIVO` permite informar um arquivo com uma lista de IPs, um por linha.
 - `--token TOKEN` ou variável `IPINFO_TOKEN` para autenticar requisições ao IPinfo.
 - `--full` executa todas as consultas disponíveis.
+- O menu agora possui uma opção para ler uma lista de IPs de um arquivo e
+  salvar as informações de geolocalização em `results_<arquivo>.txt`.
 
 Copie o arquivo de exemplo e preencha as credenciais necessárias:
 

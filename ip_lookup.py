@@ -367,6 +367,33 @@ def process_file(path, hops, token=None, full=False, db_path=None):
             process_ip(ip, hops, token=token)
 
 
+def save_results_from_file(path, hops, token=None, db_path=None):
+    """Read IPs from *path* and save geolocation info to results_<file>.txt."""
+    base = os.path.basename(path)
+    out_path = f"results_{base}"
+    try:
+        with open(path, 'r') as f:
+            ips = [line.strip() for line in f if line.strip()]
+    except Exception as e:
+        print(f'Erro ao ler arquivo: {e}')
+        return
+
+    try:
+        with open(out_path, 'w') as out:
+            for ip in ips:
+                if not is_valid_ip(ip):
+                    print(f"{ip} é inválido. Pulando...")
+                    continue
+                info = geolocation_lookup(ip, token=token)
+                out.write(f"IP: {ip}\n")
+                out.write("Informações:\n")
+                out.write(f"{format_geo(info)}\n")
+                out.write("Ferramenta responsavel: ipinfo.io\n\n")
+        print(f'Resultados salvos em {out_path}')
+    except Exception as e:
+        print(f'Erro ao salvar resultados: {e}')
+
+
 def menu(hops, token=None):
     """Interactive prompt for querying IPs with various tools."""
     load_dotenv()
@@ -384,6 +411,7 @@ def menu(hops, token=None):
         print('9) Traceroute')
         print('10) Todas as ferramentas')
         print('11) Informar arquivo com lista de IPs (todas)')
+        print('12) Ler arquivo de IPs e salvar em results_*.txt')
         print('0) Sair')
         choice = input('Opção: ').strip()
         if choice in {'1','2','3','4','5','6','7','8','9','10'}:
@@ -414,6 +442,10 @@ def menu(hops, token=None):
             path = input('Caminho do arquivo: ').strip()
             if path:
                 process_file(path, hops, token=token, full=True, db_path=db_path)
+        elif choice == '12':
+            path = input('Caminho do arquivo: ').strip()
+            if path:
+                save_results_from_file(path, hops, token=token, db_path=db_path)
         elif choice == '0':
             break
         else:
