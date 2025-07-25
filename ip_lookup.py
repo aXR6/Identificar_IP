@@ -72,8 +72,21 @@ def geoip2_lookup(ip, db_path=None):
         return {'error': str(e)}
 
 
-def shodan_lookup(ip, api_key=None, quiet=False):
-    """Return Shodan data for *ip*."""
+def shodan_lookup(ip, api_key=None, quiet=False, history=False):
+    """Return Shodan data for *ip*.
+
+    Parameters
+    ----------
+    ip : str | list
+        IP address to query or list of IPs for bulk lookups.
+    api_key : str, optional
+        Shodan API key. If ``None`` the ``SHODAN_API_KEY`` environment variable
+        will be used.
+    quiet : bool, optional
+        If ``True`` suppress warning messages when the API key is missing.
+    history : bool, optional
+        Include historical banners if available. Requires a Shodan Membership.
+    """
     api_key = api_key or os.getenv('SHODAN_API_KEY')
     if not api_key:
         if not quiet:
@@ -82,7 +95,10 @@ def shodan_lookup(ip, api_key=None, quiet=False):
         return {}
     try:
         api = Shodan(api_key)
-        return api.host(ip)
+        # ``api.host`` accepts a single IP string or a list of IPs when using
+        # a Corporate API key. ``history`` defaults to ``False`` but can be
+        # enabled to retrieve all banners ever seen for the IP.
+        return api.host(ip, history=history)
     except Exception as e:
         return {'error': str(e)}
 
@@ -321,8 +337,14 @@ def process_ip(ip, hops, token=None):
         print(trace)
 
 
-def process_all(ip, hops, token=None, db_path=None):
-    """Run all available lookups for *ip*."""
+def process_all(ip, hops, token=None, db_path=None, shodan_history=False):
+    """Run all available lookups for *ip*.
+
+    Parameters
+    ----------
+    shodan_history : bool, optional
+        Whether to include historical banners when querying Shodan.
+    """
     if not is_valid_ip(ip):
         print(f"{ip} é inválido.")
         return
@@ -345,7 +367,7 @@ def process_all(ip, hops, token=None, db_path=None):
         print('\n===== GEOIP2 =====')
         print(geoip2_text)
 
-    shodan_info = shodan_lookup(ip, quiet=True)
+    shodan_info = shodan_lookup(ip, quiet=True, history=shodan_history)
     shodan_text = format_dict(shodan_info)
     if shodan_text and not shodan_text.startswith('Erro:'):
         print('\n===== SHODAN =====')
@@ -381,8 +403,14 @@ def process_all(ip, hops, token=None, db_path=None):
         print(trace)
 
 
-def process_file(path, hops, token=None, full=False, db_path=None):
-    """Read IPs from *path*, process each one and save the results."""
+def process_file(path, hops, token=None, full=False, db_path=None, shodan_history=False):
+    """Read IPs from *path*, process each one and save the results.
+
+    Parameters
+    ----------
+    shodan_history : bool, optional
+        When ``full`` is ``True`` include historical Shodan data in each lookup.
+    """
     try:
         with open(path, 'r') as f:
             ips = [line.strip() for line in f if line.strip()]
@@ -401,7 +429,7 @@ def process_file(path, hops, token=None, full=False, db_path=None):
         buf = StringIO()
         with redirect_stdout(buf):
             if full:
-                process_all(ip, hops, token=token, db_path=db_path)
+                process_all(ip, hops, token=token, db_path=db_path, shodan_history=shodan_history)
             else:
                 process_ip(ip, hops, token=token)
         output = buf.getvalue()
@@ -484,7 +512,8 @@ def menu(hops, token=None):
             elif choice == '3':
                 print(format_geoip2(geoip2_lookup(ip, db_path=db_path)))
             elif choice == '4':
-                print(format_dict(shodan_lookup(ip)))
+                hist = input('Incluir histórico do Shodan? (s/n) ').strip().lower() == 's'
+                print(format_dict(shodan_lookup(ip, history=hist)))
             elif choice == '5':
                 print(format_dict(abuseipdb_lookup(ip)))
             elif choice == '6':
@@ -496,11 +525,13 @@ def menu(hops, token=None):
             elif choice == '9':
                 print(traceroute(ip, hops))
             elif choice == '10':
-                process_all(ip, hops, token=token, db_path=db_path)
+                hist = input('Incluir histórico do Shodan? (s/n) ').strip().lower() == 's'
+                process_all(ip, hops, token=token, db_path=db_path, shodan_history=hist)
         elif choice == '11':
             path = input('Caminho do arquivo: ').strip()
             if path:
-                process_file(path, hops, token=token, full=True, db_path=db_path)
+                hist = input('Incluir histórico do Shodan? (s/n) ').strip().lower() == 's'
+                process_file(path, hops, token=token, full=True, db_path=db_path, shodan_history=hist)
         elif choice == '12':
             path = input('Caminho do arquivo: ').strip()
             if path:
@@ -519,6 +550,7 @@ def main():
     parser.add_argument('--hops', type=int, default=10, help='Max hops for traceroute')
     parser.add_argument('--token', help='IPinfo API token (or set IPINFO_TOKEN env var)')
     parser.add_argument('--full', action='store_true', help='Run all available lookups')
+    parser.add_argument('--history', action='store_true', help='Include historical Shodan data')
     args = parser.parse_args()
 
     load_dotenv()
@@ -526,11 +558,11 @@ def main():
 
     if args.ip:
         if args.full:
-            process_all(args.ip, args.hops, token=token)
+            process_all(args.ip, args.hops, token=token, shodan_history=args.history)
         else:
             process_ip(args.ip, args.hops, token=token)
     elif args.file:
-        process_file(args.file, args.hops, token=token, full=args.full)
+        process_file(args.file, args.hops, token=token, full=args.full, shodan_history=args.history)
     else:
         menu(args.hops, token=token)
 

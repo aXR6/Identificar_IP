@@ -43,8 +43,9 @@ Execute o script `ip_lookup.py` com o Python 3 informando o IP desejado ou rode 
 
 ```bash
 # executando todas as consultas
-# executando todas as consultas
 python3 ip_lookup.py 8.8.8.8 --full
+# incluindo histórico do Shodan
+python3 ip_lookup.py 8.8.8.8 --full --history
 # ou simplesmente
 python3 ip_lookup.py
 ```
@@ -55,6 +56,7 @@ Parâmetros adicionais:
 - `--file ARQUIVO` permite informar um arquivo com uma lista de IPs, um por linha.
 - `--token TOKEN` ou variável `IPINFO_TOKEN` para autenticar requisições ao IPinfo.
 - `--full` executa todas as consultas disponíveis.
+- `--history` inclui banners históricos nas consultas ao Shodan (requer conta com Membership).
 - O menu possui uma opção para ler uma lista de IPs de um arquivo. Após todas as
   verificações, é criado automaticamente um arquivo `result_data_hora.txt` na pasta do
   projeto contendo todas as saídas. Ferramentas sem retorno não terão seu bloco
