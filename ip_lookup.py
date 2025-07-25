@@ -403,7 +403,8 @@ def process_all(ip, hops, token=None, db_path=None, shodan_history=False):
         print(trace)
 
 
-def process_file(path, hops, token=None, full=False, db_path=None, shodan_history=False):
+def process_file(path, hops, token=None, full=False, db_path=None,
+                 shodan_history=False, out_path=None):
     """Read IPs from *path*, process each one and save the results.
 
     Parameters
@@ -440,10 +441,11 @@ def process_file(path, hops, token=None, full=False, db_path=None, shodan_histor
     if outputs:
         from datetime import datetime
         result_text = "\n".join(outputs)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"result_{timestamp}.txt"
-        out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               filename)
+        if out_path is None:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"result_{timestamp}.txt"
+            out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   filename)
         try:
             with open(out_path, 'w') as out:
                 out.write(result_text)
@@ -551,18 +553,32 @@ def main():
     parser.add_argument('--token', help='IPinfo API token (or set IPINFO_TOKEN env var)')
     parser.add_argument('--full', action='store_true', help='Run all available lookups')
     parser.add_argument('--history', action='store_true', help='Include historical Shodan data')
+    parser.add_argument('--output', help='Save results to the specified file')
     args = parser.parse_args()
 
     load_dotenv()
     token = args.token or os.getenv('IPINFO_TOKEN')
 
     if args.ip:
-        if args.full:
-            process_all(args.ip, args.hops, token=token, shodan_history=args.history)
-        else:
-            process_ip(args.ip, args.hops, token=token)
+        from io import StringIO
+        from contextlib import redirect_stdout
+        buf = StringIO()
+        with redirect_stdout(buf):
+            if args.full:
+                process_all(args.ip, args.hops, token=token, shodan_history=args.history)
+            else:
+                process_ip(args.ip, args.hops, token=token)
+        output = buf.getvalue()
+        print(output)
+        if args.output:
+            try:
+                with open(args.output, 'w') as out:
+                    out.write(output)
+            except Exception as e:
+                print(f'Erro ao salvar resultados: {e}')
     elif args.file:
-        process_file(args.file, args.hops, token=token, full=args.full, shodan_history=args.history)
+        process_file(args.file, args.hops, token=token, full=args.full,
+                     shodan_history=args.history, out_path=args.output)
     else:
         menu(args.hops, token=token)
 
