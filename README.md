@@ -57,6 +57,7 @@ Parâmetros adicionais:
 - `--token TOKEN` ou variável `IPINFO_TOKEN` para autenticar requisições ao IPinfo.
 - `--full` executa todas as consultas disponíveis.
 - `--history` inclui banners históricos nas consultas ao Shodan (requer conta com Membership).
+- `--output ARQUIVO` salva os resultados no arquivo informado em vez de criar `result_<data>.txt`.
 - O menu possui uma opção para ler uma lista de IPs de um arquivo. Após todas as
   verificações, é criado automaticamente um arquivo `result_data_hora.txt` na pasta do
   projeto contendo todas as saídas. Ferramentas sem retorno não terão seu bloco
