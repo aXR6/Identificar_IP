@@ -72,12 +72,13 @@ def geoip2_lookup(ip, db_path=None):
         return {'error': str(e)}
 
 
-def shodan_lookup(ip, api_key=None):
+def shodan_lookup(ip, api_key=None, quiet=False):
     """Return Shodan data for *ip*."""
     api_key = api_key or os.getenv('SHODAN_API_KEY')
     if not api_key:
-        print('Chave da API do Shodan não configurada (SHODAN_API_KEY).')
-        print('Consulte o README para obter e definir a chave.')
+        if not quiet:
+            print('Chave da API do Shodan não configurada (SHODAN_API_KEY).')
+            print('Consulte o README para obter e definir a chave.')
         return {}
     try:
         api = Shodan(api_key)
@@ -86,12 +87,13 @@ def shodan_lookup(ip, api_key=None):
         return {'error': str(e)}
 
 
-def abuseipdb_lookup(ip, api_key=None):
+def abuseipdb_lookup(ip, api_key=None, quiet=False):
     """Query AbuseIPDB for *ip*."""
     api_key = api_key or os.getenv('ABUSEIPDB_API_KEY')
     if not api_key:
-        print('Chave da API do AbuseIPDB não configurada (ABUSEIPDB_API_KEY).')
-        print('Cadastre-se no site e defina a chave para usar esta consulta.')
+        if not quiet:
+            print('Chave da API do AbuseIPDB não configurada (ABUSEIPDB_API_KEY).')
+            print('Cadastre-se no site e defina a chave para usar esta consulta.')
         return {}
     url = 'https://api.abuseipdb.com/api/v2/check'
     params = {'ipAddress': ip, 'maxAgeInDays': '90'}
@@ -106,13 +108,14 @@ def abuseipdb_lookup(ip, api_key=None):
         return {'error': str(e)}
 
 
-def censys_lookup(ip, api_id=None, api_secret=None):
+def censys_lookup(ip, api_id=None, api_secret=None, quiet=False):
     """Return Censys information for *ip*."""
     api_id = api_id or os.getenv('CENSYS_API_ID')
     api_secret = api_secret or os.getenv('CENSYS_API_SECRET')
     if not api_id or not api_secret:
-        print('Credenciais do Censys não configuradas (CENSYS_API_ID/SECRET).')
-        print('Cadastre-se no Censys para obter as credenciais necessárias.')
+        if not quiet:
+            print('Credenciais do Censys não configuradas (CENSYS_API_ID/SECRET).')
+            print('Cadastre-se no Censys para obter as credenciais necessárias.')
         return {}
     try:
         client = CensysHosts(api_id=api_id, api_secret=api_secret)
@@ -300,17 +303,22 @@ def process_ip(ip, hops, token=None):
         print(f"{ip} é inválido.")
         return
 
-    print('===== WHOIS / ASN =====')
     whois_info = whois_lookup(ip)
-    print(format_whois(whois_info))
+    whois_text = format_whois(whois_info)
+    if whois_text and not whois_text.startswith('Erro:'):
+        print('===== WHOIS / ASN =====')
+        print(whois_text)
 
-    print('\n===== GEOLOCATION =====')
     geo_info = geolocation_lookup(ip, token=token)
-    print(format_geo(geo_info))
+    geo_text = format_geo(geo_info)
+    if geo_text and not geo_text.startswith('Erro:'):
+        print('\n===== GEOLOCATION =====')
+        print(geo_text)
 
-    print('\n===== TRACEROUTE =====')
     trace = traceroute(ip, hops)
-    print(trace)
+    if trace.strip() and not trace.startswith('traceroute não encontrado') and not trace.startswith('tracert não encontrado'):
+        print('\n===== TRACEROUTE =====')
+        print(trace)
 
 
 def process_all(ip, hops, token=None, db_path=None):
@@ -319,32 +327,58 @@ def process_all(ip, hops, token=None, db_path=None):
         print(f"{ip} é inválido.")
         return
 
-    print('===== WHOIS / ASN =====')
-    print(format_whois(whois_lookup(ip)))
+    whois_info = whois_lookup(ip)
+    whois_text = format_whois(whois_info)
+    if whois_text and not whois_text.startswith('Erro:'):
+        print('===== WHOIS / ASN =====')
+        print(whois_text)
 
-    print('\n===== IPINFO GEO =====')
-    print(format_geo(geolocation_lookup(ip, token=token)))
+    geo_info = geolocation_lookup(ip, token=token)
+    geo_text = format_geo(geo_info)
+    if geo_text and not geo_text.startswith('Erro:'):
+        print('\n===== IPINFO GEO =====')
+        print(geo_text)
 
-    print('\n===== GEOIP2 =====')
-    print(format_geoip2(geoip2_lookup(ip, db_path=db_path)))
+    geoip2_info = geoip2_lookup(ip, db_path=db_path)
+    geoip2_text = format_geoip2(geoip2_info)
+    if geoip2_text and not geoip2_text.startswith('Erro:'):
+        print('\n===== GEOIP2 =====')
+        print(geoip2_text)
 
-    print('\n===== SHODAN =====')
-    print(format_dict(shodan_lookup(ip)))
+    shodan_info = shodan_lookup(ip, quiet=True)
+    shodan_text = format_dict(shodan_info)
+    if shodan_text and not shodan_text.startswith('Erro:'):
+        print('\n===== SHODAN =====')
+        print(shodan_text)
 
-    print('\n===== ABUSEIPDB =====')
-    print(format_dict(abuseipdb_lookup(ip)))
+    abuse_info = abuseipdb_lookup(ip, quiet=True)
+    abuse_text = format_dict(abuse_info)
+    if abuse_text and not abuse_text.startswith('Erro:'):
+        print('\n===== ABUSEIPDB =====')
+        print(abuse_text)
 
-    print('\n===== CENSYS =====')
-    print(format_dict(censys_lookup(ip)))
+    censys_info = censys_lookup(ip, quiet=True)
+    censys_text = format_dict(censys_info)
+    if censys_text and not censys_text.startswith('Erro:'):
+        print('\n===== CENSYS =====')
+        print(censys_text)
 
-    print('\n===== DNS =====')
-    print(format_dict(dns_lookup(ip)))
+    dns_info = dns_lookup(ip)
+    dns_text = format_dict(dns_info)
+    if dns_text and not dns_text.startswith('Erro:'):
+        print('\n===== DNS =====')
+        print(dns_text)
 
-    print('\n===== RBL CHECK =====')
-    print(format_dict(rbl_check(ip)))
+    rbl_info = rbl_check(ip)
+    rbl_text = format_dict(rbl_info)
+    if rbl_text and not rbl_text.startswith('Erro:'):
+        print('\n===== RBL CHECK =====')
+        print(rbl_text)
 
-    print('\n===== TRACEROUTE =====')
-    print(traceroute(ip, hops))
+    trace = traceroute(ip, hops)
+    if trace.strip() and not trace.startswith('traceroute não encontrado') and not trace.startswith('tracert não encontrado'):
+        print('\n===== TRACEROUTE =====')
+        print(trace)
 
 
 def process_file(path, hops, token=None, full=False, db_path=None):
@@ -371,8 +405,9 @@ def process_file(path, hops, token=None, full=False, db_path=None):
             else:
                 process_ip(ip, hops, token=token)
         output = buf.getvalue()
-        print(output)
-        outputs.append(output)
+        if output.strip():
+            print(output)
+            outputs.append(output)
 
     if outputs:
         from datetime import datetime
@@ -407,10 +442,12 @@ def save_results_from_file(path, hops, token=None, db_path=None):
                     print(f"{ip} é inválido. Pulando...")
                     continue
                 info = geolocation_lookup(ip, token=token)
-                out.write(f"IP: {ip}\n")
-                out.write("Informações:\n")
-                out.write(f"{format_geo(info)}\n")
-                out.write("Ferramenta responsavel: ipinfo.io\n\n")
+                info_text = format_geo(info)
+                if info_text and not info_text.startswith('Erro:'):
+                    out.write(f"IP: {ip}\n")
+                    out.write("Informações:\n")
+                    out.write(f"{info_text}\n")
+                    out.write("Ferramenta responsavel: ipinfo.io\n\n")
         print(f'Resultados salvos em {out_path}')
     except Exception as e:
         print(f'Erro ao salvar resultados: {e}')

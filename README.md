@@ -57,7 +57,8 @@ Parâmetros adicionais:
 - `--full` executa todas as consultas disponíveis.
 - O menu possui uma opção para ler uma lista de IPs de um arquivo. Após todas as
   verificações, é criado automaticamente um arquivo `result_data_hora.txt` na pasta do
-  projeto contendo todas as saídas.
+  projeto contendo todas as saídas. Ferramentas sem retorno não terão seu bloco
+  gravado nesse arquivo.
 
 Copie o arquivo de exemplo e preencha as credenciais necessárias:
 
