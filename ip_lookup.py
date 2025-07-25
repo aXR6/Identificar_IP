@@ -348,7 +348,7 @@ def process_all(ip, hops, token=None, db_path=None):
 
 
 def process_file(path, hops, token=None, full=False, db_path=None):
-    """Read IPs from *path*, process each one and create result_hash.txt."""
+    """Read IPs from *path*, process each one and save the results."""
     try:
         with open(path, 'r') as f:
             ips = [line.strip() for line in f if line.strip()]
@@ -375,17 +375,18 @@ def process_file(path, hops, token=None, full=False, db_path=None):
         outputs.append(output)
 
     if outputs:
-        import hashlib
+        from datetime import datetime
         result_text = "\n".join(outputs)
-        digest = hashlib.sha256(result_text.encode()).hexdigest()
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"result_{timestamp}.txt"
         out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               'result_hash.txt')
+                               filename)
         try:
             with open(out_path, 'w') as out:
-                out.write(digest)
-            print(f'Hash salvo em {out_path}')
+                out.write(result_text)
+            print(f'Resultados salvos em {out_path}')
         except Exception as e:
-            print(f'Erro ao salvar hash: {e}')
+            print(f'Erro ao salvar resultados: {e}')
 
 
 def save_results_from_file(path, hops, token=None, db_path=None):
